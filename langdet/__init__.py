@@ -66,7 +66,7 @@ class RandomLanguageDetector(LanguageDetector):
 
 class CosineLanguageDetector(LanguageDetector):
     def _extract_features(self, text):
-        return map(''.join, zip(text, text[1:]))
+        return list(text)
 
     def _normalize_vector(self, v):
         norm = math.sqrt(sum(x*x for x in v.itervalues()))
@@ -101,3 +101,21 @@ class CosineLanguageDetector(LanguageDetector):
                 score += u[f] * v.get(f, 0.0)
             r.append((l, score))
         return max(r, key=itemgetter(1))
+
+
+class BigramFeatureMixin(object):
+    def _extract_features(self, text):
+        return map(''.join, zip(text, text[1:]))
+
+
+class TrigramFeatureMixin(object):
+    def _extract_features(self, text):
+        return map(''.join, zip(text, text[1:], text[2:]))
+
+
+class BigramCosineLanguageDetector(BigramFeatureMixin, CosineLanguageDetector):
+    pass
+
+
+class TrigramCosineLanguageDetector(TrigramFeatureMixin, CosineLanguageDetector):
+    pass
