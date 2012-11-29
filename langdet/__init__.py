@@ -1,3 +1,6 @@
+"""Simple language detector
+
+"""
 import re
 import math
 import random
@@ -8,6 +11,8 @@ from collections import defaultdict
 
 
 def stream_sample(filename):
+    """Streams over a dataset, iterates over language label and sample text"""
+
     with open(filename) as fin:
         for line in fin:
             lang, text = line[:-1].decode('utf8').split('\t')
@@ -15,6 +20,11 @@ def stream_sample(filename):
 
 
 class LanguageDetector(object):
+    """Base class for a language detector
+
+    NOTE: do not use this class, use one of the subclasses.
+
+    """
     def train(self, samples):
         raise NotImplemented
 
@@ -22,6 +32,8 @@ class LanguageDetector(object):
         return 'xx', 0.0
 
     def eval(self, samples):
+        """Evaluate the model against a labelled set"""
+
         tp = defaultdict(int)
         fn = defaultdict(int)
         fp = defaultdict(int)
@@ -56,6 +68,9 @@ class LanguageDetector(object):
 
 
 class RandomLanguageDetector(LanguageDetector):
+    """Simple random classifier.
+
+    """
     def train(self, samples):
         model = set()
         for label, _ in samples:
@@ -68,8 +83,24 @@ class RandomLanguageDetector(LanguageDetector):
 
 
 class CosineLanguageDetector(LanguageDetector):
+    """Cosine similarity based language classifier that uses single chars as features
+
+    """
+    def _preprocess(self, text):
+        text = unicodedata.normalize('NFC', text)
+
+        #
+        # We can apply other classic normalization for text, like lower case
+        # transform and punctuations removal
+        #
+        # text = ' '.join(word_tokenizer(text))
+        # return text.lower()
+        #
+
+        return text
+
     def _extract_features(self, text):
-        return list(text)
+        return list(self._preprocess(text))
 
     def _normalize_vector(self, v):
         norm = math.sqrt(sum(x*x for x in v.itervalues()))
@@ -108,19 +139,25 @@ class CosineLanguageDetector(LanguageDetector):
 
 class BigramFeatureMixin(object):
     def _extract_features(self, text):
+        text = self._preprocess(text)
         return [text[i:i+2] for i in xrange(len(text)-1)]
 
 
 class TrigramFeatureMixin(object):
     def _extract_features(self, text):
+        text = self._preprocess(text)
         return [text[i:i+3] for i in xrange(len(text)-2)]
 
 
 class BigramCosineLanguageDetector(BigramFeatureMixin, CosineLanguageDetector):
+    """Cosine similarity language classifier with bigrams as features"""
+
     pass
 
 
 class TrigramCosineLanguageDetector(TrigramFeatureMixin, CosineLanguageDetector):
+    """Cosine similarity language classifier with trigrams as features"""
+
     pass
 
 
@@ -128,25 +165,38 @@ word_tokenizer = re.compile('\w+', re.U).findall
 
 
 class MultipleFeatureMixin(object):
+    weight = [1.0, 1.0, 1.0]
+
     def _extract_features(self, text):
-        text = unicodedata.normalize('NFC', text)
-        text = ' '.join(word_tokenizer(text))
+        text = self._preprocess(text)
         unigrams = list(text)
         bigrams = [text[i:i+2] for i in xrange(len(text)-1)]
         trigrams = [text[i:i+3] for i in xrange(len(text)-2)]
         return [x for x in chain(unigrams, bigrams, trigrams) if not x.isdigit()]
 
     def _normalize_vector(self, v):
+        # Normalize each feature as they are separated vector, this means the
+        # result is the sum of the dot products of each feature group
+        # To apply different weights for each feature group you can change the
+        # `weight` vector.
         norm = [0.0, 0.0, 0.0]
         for k, x in v.iteritems():
             norm[len(k)-1] += x*x
 
         for i in range(len(norm)):
-            norm[i] = math.sqrt(norm[i])
+            norm[i] = math.sqrt(norm[i]) * (1.0/math.sqrt(self.weight[i]))
 
         for k in v:
             v[k] /= norm[len(k)-1]
 
 
 class MultiCosineLanguageDetector(MultipleFeatureMixin, CosineLanguageDetector):
+    """Cosine similarity language classifier with multiple features
+
+    Uses the following features:
+    - single chars
+    - bigrams
+    - trigrams
+
+    """
     pass
