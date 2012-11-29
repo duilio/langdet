@@ -1,4 +1,6 @@
 import random
+import math
+from operator import itemgetter
 from collections import defaultdict
 
 
@@ -10,9 +12,6 @@ def stream_sample(filename):
 
 
 class LanguageDetector(object):
-    def preprocess(self, text):
-        return text
-
     def train(self, samples):
         raise NotImplemented
 
@@ -54,10 +53,6 @@ class LanguageDetector(object):
 
 
 class RandomLanguageDetector(LanguageDetector):
-    def __init__(self):
-        super(RandomLanguageDetector, self).__init__()
-        self._random = random.Random()
-        
     def train(self, samples):
         model = set()
         for label, _ in samples:
@@ -66,4 +61,43 @@ class RandomLanguageDetector(LanguageDetector):
         self._model = list(model)
 
     def detect(self, text):
-        return self._random.choice(self._model), 1.0
+        return random.choice(self._model), 1.0
+
+
+class CosineLanguageDetector(LanguageDetector):
+    def _extract_features(self, text):
+        return list(text)
+
+    def _normalize_vector(self, v):
+        norm = math.sqrt(sum(x*x for x in v.itervalues()))
+        for k in v:
+            v[k] /= norm
+        
+    def train(self, samples):
+        extract_features = self._extract_features
+
+        model = defaultdict(lambda: defaultdict(float))
+        for label, text in samples:
+            features = extract_features(text)
+            for f in features:
+                model[label][f] += 1
+
+        for v in model.itervalues():
+            self._normalize_vector(v)
+
+        self._model = model
+
+    def detect(self, text):
+        features = self._extract_features(text)
+        u = defaultdict(float)
+        for f in features:
+            u[f] += 1
+        self._normalize_vector(u)
+
+        r = []
+        for l, v in self._model.iteritems():
+            score = 0.0
+            for f in u:
+                score += u[f] * v.get(f, 0.0)
+            r.append((l, score))
+        return max(r, key=itemgetter(1))

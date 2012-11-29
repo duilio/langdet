@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 import argparse
-from langdet import RandomLanguageDetector, stream_sample
+from langdet import RandomLanguageDetector, CosineLanguageDetector, stream_sample
 
+algos = {
+    'random': RandomLanguageDetector,
+    'cosine': CosineLanguageDetector,
+    }
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -9,10 +13,16 @@ if __name__ == '__main__':
     parser.add_argument('test', help='Testing set')
     args = parser.parse_args()
 
-    det = RandomLanguageDetector()
-    det.train(stream_sample(args.train))
-    precision, recall, mistakes = det.eval(stream_sample(args.test))
+    train = list(stream_sample(args.train))
+    test = list(stream_sample(args.test))
+    
+    for algo_name, algo_class in algos.iteritems():
+        det = algo_class()
+        det.train(train)
+        precision, recall, mistakes = det.eval(test)
 
-    print '%s\t%s\t%s' % ('Lang', 'Prec', 'Rec')
-    for lang in sorted(precision):
-        print '%s\t%.2f\t%.2f' % (lang, precision[lang], recall[lang])
+        print algo_name
+        print '%s\t%s\t%s' % ('Lang', 'Prec', 'Rec')
+        for lang in sorted(precision):
+            print '%s\t%.2f\t%.2f' % (lang, precision[lang], recall[lang])
+        print
