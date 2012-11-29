@@ -108,12 +108,12 @@ class CosineLanguageDetector(LanguageDetector):
 
 class BigramFeatureMixin(object):
     def _extract_features(self, text):
-        return map(''.join, zip(text, text[1:]))
+        return [text[i:i+2] for i in xrange(len(text)-1)]
 
 
 class TrigramFeatureMixin(object):
     def _extract_features(self, text):
-        return map(''.join, zip(text, text[1:], text[2:]))
+        return [text[i:i+3] for i in xrange(len(text)-2)]
 
 
 class BigramCosineLanguageDetector(BigramFeatureMixin, CosineLanguageDetector):
