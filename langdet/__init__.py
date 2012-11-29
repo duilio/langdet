@@ -66,7 +66,7 @@ class RandomLanguageDetector(LanguageDetector):
 
 class CosineLanguageDetector(LanguageDetector):
     def _extract_features(self, text):
-        return list(text)
+        return map(''.join, zip(text, text[1:]))
 
     def _normalize_vector(self, v):
         norm = math.sqrt(sum(x*x for x in v.itervalues()))
