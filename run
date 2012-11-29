@@ -7,6 +7,7 @@ from langdet import \
     CosineLanguageDetector, \
     BigramCosineLanguageDetector, \
     TrigramCosineLanguageDetector, \
+    MultiCosineLanguageDetector, \
     stream_sample
 
 algos = OrderedDict([
@@ -14,6 +15,7 @@ algos = OrderedDict([
     ('cosine1', CosineLanguageDetector),
     ('cosine2', BigramCosineLanguageDetector),
     ('cosine3', TrigramCosineLanguageDetector),
+    ('multi', MultiCosineLanguageDetector),
     ])
 
 if __name__ == '__main__':

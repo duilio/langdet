@@ -1,6 +1,9 @@
-import random
+import re
 import math
+import random
+import unicodedata
 from operator import itemgetter
+from itertools import chain
 from collections import defaultdict
 
 
@@ -118,4 +121,32 @@ class BigramCosineLanguageDetector(BigramFeatureMixin, CosineLanguageDetector):
 
 
 class TrigramCosineLanguageDetector(TrigramFeatureMixin, CosineLanguageDetector):
+    pass
+
+
+word_tokenizer = re.compile('\w+', re.U).findall
+
+
+class MultipleFeatureMixin(object):
+    def _extract_features(self, text):
+        text = unicodedata.normalize('NFC', text)
+        text = ' '.join(word_tokenizer(text))
+        unigrams = list(text)
+        bigrams = [text[i:i+2] for i in xrange(len(text)-1)]
+        trigrams = [text[i:i+3] for i in xrange(len(text)-2)]
+        return [x for x in chain(unigrams, bigrams, trigrams) if not x.isdigit()]
+
+    def _normalize_vector(self, v):
+        norm = [0.0, 0.0, 0.0]
+        for k, x in v.iteritems():
+            norm[len(k)-1] += x*x
+
+        for i in range(len(norm)):
+            norm[i] = math.sqrt(norm[i])
+
+        for k in v:
+            v[k] /= norm[len(k)-1]
+
+
+class MultiCosineLanguageDetector(MultipleFeatureMixin, CosineLanguageDetector):
     pass
