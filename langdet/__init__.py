@@ -119,7 +119,7 @@ class CosineLanguageDetector(LanguageDetector):
         for v in model.itervalues():
             self._normalize_vector(v)
 
-        self._model = model
+        self._model = dict(model)
 
     def detect(self, text):
         features = self._extract_features(text)
